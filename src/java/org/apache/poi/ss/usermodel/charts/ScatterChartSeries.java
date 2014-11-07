@@ -17,21 +17,22 @@
 
 package org.apache.poi.ss.usermodel.charts;
 
-import java.util.List;
+import org.apache.poi.util.Beta;
 
 /**
- * Data for a Scatter Chart
+ * Represents scatter charts series.
  */
-public interface ScatterChartData extends ChartData {
-	/**
-	 * @param xs data source to be used for X axis values
-	 * @param ys data source to be used for Y axis values
-	 * @return a new scatter charts series
-	 */
-	ScatterChartSeries addSerie(ChartDataSource<?> xs, ChartDataSource<? extends Number> ys);
+@Beta
+public interface ScatterChartSeries extends ChartSeries {
 
-	/**
-	 * @return list of all series
-	 */
-	List<? extends ScatterChartSeries> getSeries();
+    /**
+     * @return data source used for X axis values
+     */
+    ChartDataSource<?> getXValues();
+
+    /**
+     * @return data source used for Y axis values
+     */
+    ChartDataSource<? extends Number> getYValues();
+
 }

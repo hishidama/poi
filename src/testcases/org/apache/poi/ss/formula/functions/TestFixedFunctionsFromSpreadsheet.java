@@ -15,27 +15,15 @@
    limitations under the License.
 ==================================================================== */
 
-package org.apache.poi.ss.usermodel.charts;
-
-import org.apache.poi.util.Beta;
+package org.apache.poi.ss.formula.functions;
 
 /**
- * Represents scatter charts serie.
- *
- * @author Roman Kashitsyn
- * @author Martin Andersson
+ * Tests FIXED() as loaded from a test data spreadsheet.
  */
-@Beta
-public interface ScatterChartSerie extends ChartSerie {
+public class TestFixedFunctionsFromSpreadsheet extends BaseTestFunctionsFromSpreadsheet {
 
-    /**
-     * @return data source used for X axis values
-     */
-    ChartDataSource<?> getXValues();
-
-    /**
-     * @return data source used for Y axis values
-     */
-    ChartDataSource<? extends Number> getYValues();
-
+    @Override
+    protected String getFilename() {
+        return "57003-FixedFunctionTestCaseData.xls";
+    }
 }

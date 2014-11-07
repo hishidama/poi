@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.security.Provider;
+import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,6 +57,7 @@ import javax.xml.crypto.dsig.XMLSignContext;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.crypto.dsig.XMLSignatureFactory;
+import javax.xml.crypto.dsig.XMLValidateContext;
 import javax.xml.crypto.dsig.dom.DOMSignContext;
 import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
@@ -228,9 +231,25 @@ public class SignatureInfo implements SignatureConfigurable {
                 DOMValidateContext domValidateContext = new DOMValidateContext(keySelector, doc);
                 domValidateContext.setProperty("org.jcp.xml.dsig.validateManifests", Boolean.TRUE);
                 domValidateContext.setURIDereferencer(signatureConfig.getUriDereferencer());
+                brokenJvmWorkaround(domValidateContext);
     
                 XMLSignatureFactory xmlSignatureFactory = signatureConfig.getSignatureFactory();
                 XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
+                
+                // TODO: replace with property when xml-sec patch is applied
+                for (Reference ref : (List<Reference>)xmlSignature.getSignedInfo().getReferences()) {
+                    SignatureFacet.brokenJvmWorkaround(ref);
+                }
+                for (XMLObject xo : (List<XMLObject>)xmlSignature.getObjects()) {
+                    for (XMLStructure xs : (List<XMLStructure>)xo.getContent()) {
+                        if (xs instanceof Manifest) {
+                           for (Reference ref : (List<Reference>)((Manifest)xs).getReferences()) {
+                               SignatureFacet.brokenJvmWorkaround(ref);
+                           }
+                        }
+                    }
+                }
+                
                 boolean valid = xmlSignature.validate(domValidateContext);
 
                 if (valid) {
@@ -420,7 +439,10 @@ public class SignatureInfo implements SignatureConfigurable {
         for (Map.Entry<String,String> me : signatureConfig.getNamespacePrefixes().entrySet()) {
             xmlSignContext.putNamespacePrefix(me.getKey(), me.getValue());
         }
-        xmlSignContext.setDefaultNamespacePrefix(""); // signatureConfig.getNamespacePrefixes().get(XML_DIGSIG_NS));
+        xmlSignContext.setDefaultNamespacePrefix("");
+        // signatureConfig.getNamespacePrefixes().get(XML_DIGSIG_NS));
+        
+        brokenJvmWorkaround(xmlSignContext);
         
         XMLSignatureFactory signatureFactory = signatureConfig.getSignatureFactory();
 
@@ -635,5 +657,21 @@ public class SignatureInfo implements SignatureConfigurable {
     @SuppressWarnings("unchecked")
     private static <T> List<T> safe(List<T> other) {
         return other == null ? Collections.EMPTY_LIST : other;
+    }
+
+    private void brokenJvmWorkaround(XMLSignContext context) {
+        // workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1155012
+        Provider bcProv = Security.getProvider("BC");
+        if (bcProv != null) {
+            context.setProperty("org.jcp.xml.dsig.internal.dom.SignatureProvider", bcProv);
+        }        
+    }
+
+    private void brokenJvmWorkaround(XMLValidateContext context) {
+        // workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1155012
+        Provider bcProv = Security.getProvider("BC");
+        if (bcProv != null) {
+            context.setProperty("org.jcp.xml.dsig.internal.dom.SignatureProvider", bcProv);
+        }        
     }
 }
